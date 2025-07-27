@@ -42,11 +42,7 @@ const MapManager = lazy(() =>
         default: module.MapManager,
     }))
 );
-const CanvasGrid = lazy(() =>
-    import("./components/CanvasGrid").then((module) => ({
-        default: module.CanvasGrid,
-    }))
-);
+const CanvasGrid = lazy(() => import("./components/CanvasGrid"));
 
 function Navigation() {
     const location = useLocation();
