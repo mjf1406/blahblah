@@ -19,7 +19,8 @@ import { WorldManager } from "./components/WorldManager";
 import { MapManager } from "./components/MapManager";
 import { HomePage } from "./components/HomePage";
 import { Button } from "./components/ui/button";
-import { Home, Users, Swords, Globe, Map } from "lucide-react";
+import { Home, Users, Swords, Globe, Map, MapPinned } from "lucide-react";
+import CanvasGrid from "./components/CanvasGrid";
 
 function Navigation() {
     const location = useLocation();
@@ -30,6 +31,7 @@ function Navigation() {
         { path: "/encounters", icon: Swords, label: "Encounters" },
         { path: "/worlds", icon: Globe, label: "Worlds" },
         { path: "/maps", icon: Map, label: "Maps" },
+        { path: "/canvas", icon: MapPinned, label: "Canvas" },
     ];
 
     return (
@@ -113,6 +115,10 @@ function Content() {
                     <Route
                         path="/maps"
                         element={<MapManager />}
+                    />
+                    <Route
+                        path="/canvas"
+                        element={<CanvasGrid />}
                     />
                 </Routes>
             </Authenticated>
