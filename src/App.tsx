@@ -13,14 +13,40 @@ import {
     Link,
     useLocation,
 } from "react-router-dom";
-import { PartyManager } from "./components/PartyManager";
-import { EncounterManager } from "./components/EncounterManager";
-import { WorldManager } from "./components/WorldManager";
-import { MapManager } from "./components/MapManager";
-import { HomePage } from "./components/HomePage";
+import { Suspense, lazy } from "react";
 import { Button } from "./components/ui/button";
 import { Home, Users, Swords, Globe, Map, MapPinned } from "lucide-react";
-import CanvasGrid from "./components/CanvasGrid";
+
+const HomePage = lazy(() =>
+    import("./components/HomePage").then((module) => ({
+        default: module.HomePage,
+    }))
+);
+const PartyManager = lazy(() =>
+    import("./components/PartyManager").then((module) => ({
+        default: module.PartyManager,
+    }))
+);
+const EncounterManager = lazy(() =>
+    import("./components/EncounterManager").then((module) => ({
+        default: module.EncounterManager,
+    }))
+);
+const WorldManager = lazy(() =>
+    import("./components/WorldManager").then((module) => ({
+        default: module.WorldManager,
+    }))
+);
+const MapManager = lazy(() =>
+    import("./components/MapManager").then((module) => ({
+        default: module.MapManager,
+    }))
+);
+const CanvasGrid = lazy(() =>
+    import("./components/CanvasGrid").then((module) => ({
+        default: module.CanvasGrid,
+    }))
+);
 
 function Navigation() {
     const location = useLocation();
@@ -61,7 +87,7 @@ export default function App() {
     return (
         <Router>
             <div className="flex flex-col min-h-screen bg-gray-50">
-                <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-4 border-b shadow-sm bg-white/80 backdrop-blur-sm">
+                <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-4 border-b shadow-sm bg-white/80 backdrop-blur-sm">
                     <div className="flex items-center gap-6">
                         <h2 className="text-xl font-semibold text-primary">
                             D&D Manager
@@ -72,7 +98,9 @@ export default function App() {
                     </div>
                     <SignOutButton />
                 </header>
-                <main className="flex-1 p-8">
+                <main
+                    className={`flex-1 ${location.pathname === "/canvas" ? "" : "p-8"}`}
+                >
                     <Content />
                 </main>
                 <Toaster />
@@ -83,6 +111,8 @@ export default function App() {
 
 function Content() {
     const loggedInUser = useQuery(api.auth.loggedInUser);
+    const location = useLocation();
+    const isCanvasRoute = location.pathname === "/canvas";
 
     if (loggedInUser === undefined) {
         return (
@@ -93,34 +123,42 @@ function Content() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto">
+        <div className={isCanvasRoute ? "" : "max-w-6xl mx-auto"}>
             <Authenticated>
-                <Routes>
-                    <Route
-                        path="/"
-                        element={<HomePage />}
-                    />
-                    <Route
-                        path="/parties"
-                        element={<PartyManager />}
-                    />
-                    <Route
-                        path="/encounters"
-                        element={<EncounterManager />}
-                    />
-                    <Route
-                        path="/worlds"
-                        element={<WorldManager />}
-                    />
-                    <Route
-                        path="/maps"
-                        element={<MapManager />}
-                    />
-                    <Route
-                        path="/canvas"
-                        element={<CanvasGrid />}
-                    />
-                </Routes>
+                <Suspense
+                    fallback={
+                        <div className="flex items-center justify-center">
+                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-primary"></div>
+                        </div>
+                    }
+                >
+                    <Routes>
+                        <Route
+                            path="/"
+                            element={<HomePage />}
+                        />
+                        <Route
+                            path="/parties"
+                            element={<PartyManager />}
+                        />
+                        <Route
+                            path="/encounters"
+                            element={<EncounterManager />}
+                        />
+                        <Route
+                            path="/worlds"
+                            element={<WorldManager />}
+                        />
+                        <Route
+                            path="/maps"
+                            element={<MapManager />}
+                        />
+                        <Route
+                            path="/canvas"
+                            element={<CanvasGrid />}
+                        />
+                    </Routes>
+                </Suspense>
             </Authenticated>
             <Unauthenticated>
                 <div className="text-center">
