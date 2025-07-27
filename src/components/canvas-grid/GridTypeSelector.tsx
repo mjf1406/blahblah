@@ -20,22 +20,22 @@ const gridTypeOptions = [
     },
     {
         value: "hex-flat-odd",
-        imageSrc: "/src/assets/img/hex-flat-odd.svg",
+        imageSrc: "/assets/img/hex-flat-odd.svg",
         label: "Flat Odd",
     },
     {
         value: "hex-flat-even",
-        imageSrc: "/src/assets/img/hex-flat-even.svg",
+        imageSrc: "/assets/img/hex-flat-even.svg",
         label: "Flat Even",
     },
     {
         value: "hex-pointy-odd",
-        imageSrc: "/src/assets/img/hex-pointy-odd.svg",
+        imageSrc: "/assets/img/hex-pointy-odd.svg",
         label: "Pointy Odd",
     },
     {
         value: "hex-pointy-even",
-        imageSrc: "/src/assets/img/hex-pointy-even.svg",
+        imageSrc: "/assets/img/hex-pointy-even.svg",
         label: "Pointy Even",
     },
 ] as const;
