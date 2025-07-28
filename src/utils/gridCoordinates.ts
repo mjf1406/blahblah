@@ -31,8 +31,8 @@ export const calculateGridDimensions = (
 
     switch (gridType) {
         case "square":
-            rawWidth = cols * tileSize + borderWidth * 2;
-            rawHeight = rows * tileSize + borderWidth * 2;
+            rawWidth = cols * (tileSize + borderWidth) + borderWidth;
+            rawHeight = rows * (tileSize + borderWidth) + borderWidth;
             break;
 
         case "hex-flat-odd":
