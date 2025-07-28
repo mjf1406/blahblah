@@ -20,7 +20,6 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Monitor } from "lucide-react";
-import { GridType } from "../CanvasGrid";
 import {
     saveGridConfig,
     getGridConfig,
@@ -28,6 +27,7 @@ import {
     type GridConfig,
     type GridConfigType,
 } from "@/utils/gridConfigStorage";
+import { GridType } from "@/hooks/useGridState";
 
 const TV_SIZES = [
     { label: '24"', inches: 24 },
