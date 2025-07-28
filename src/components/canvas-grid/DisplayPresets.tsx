@@ -232,10 +232,10 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
                         <DialogHeader>
                             <DialogTitle>Configure Display Preset</DialogTitle>
                             <DialogDescription>
-                                Set up your display to create optimized maps for
-                                all grid types. This will calculate and save
-                                configurations for square, hex-flat, and
-                                hex-pointy grids.
+                                This is for displaying battle maps on a
+                                horizontal TV or monitor at 100% zoom. It fills
+                                the screen and sizes tiles so your minis and
+                                tokens fit perfectly without any manual scaling.
                             </DialogDescription>
                         </DialogHeader>
 
