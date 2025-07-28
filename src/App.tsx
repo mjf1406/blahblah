@@ -79,38 +79,43 @@ function Navigation() {
     );
 }
 
+function AppLayout() {
+    const location = useLocation();
+    const isCanvasRoute = location.pathname === "/canvas";
+
+    return (
+        <div
+            className={`flex flex-col min-h-screen bg-gray-50 ${
+                isCanvasRoute ? "overflow-hidden h-screen" : ""
+            }`}
+        >
+            <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-4 border-b shadow-sm bg-white/80 backdrop-blur-sm">
+                <div className="flex items-center gap-6">
+                    <h2 className="text-xl font-semibold text-primary">
+                        D&D Manager
+                    </h2>
+                    <Authenticated>
+                        <Navigation />
+                    </Authenticated>
+                </div>
+                <SignOutButton />
+            </header>
+            <main
+                className={`flex-1 ${
+                    isCanvasRoute ? "overflow-hidden" : "p-8 pt-8 h-full"
+                }`}
+            >
+                <Content />
+            </main>
+            <Toaster />
+        </div>
+    );
+}
+
 export default function App() {
     return (
         <Router>
-            <div
-                className={`flex flex-col min-h-screen bg-gray-50 ${
-                    location.pathname === "/canvas"
-                        ? "overflow-hidden h-screen"
-                        : ""
-                }`}
-            >
-                <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-4 border-b shadow-sm bg-white/80 backdrop-blur-sm">
-                    <div className="flex items-center gap-6">
-                        <h2 className="text-xl font-semibold text-primary">
-                            D&D Manager
-                        </h2>
-                        <Authenticated>
-                            <Navigation />
-                        </Authenticated>
-                    </div>
-                    <SignOutButton />
-                </header>
-                <main
-                    className={`flex-1 ${
-                        location.pathname === "/canvas"
-                            ? "overflow-hidden"
-                            : "p-8 h-full"
-                    }`}
-                >
-                    <Content />
-                </main>
-                <Toaster />
-            </div>
+            <AppLayout />
         </Router>
     );
 }
