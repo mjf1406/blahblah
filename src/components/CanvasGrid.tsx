@@ -53,6 +53,161 @@ const CanvasGridContent: React.FC = () => {
     const gridState = useGridState();
     const viewState = useViewState();
 
+    // Add this function inside CanvasGridContent component
+    const handleDownloadCanvas = () => {
+        // Calculate the actual grid dimensions
+        const gridWidth =
+            gridState.cols * gridState.tileSize +
+            (gridState.cols + 1) * gridState.borderWidth;
+        const gridHeight =
+            gridState.rows * gridState.tileSize +
+            (gridState.rows + 1) * gridState.borderWidth;
+
+        // Create a new canvas with exact grid dimensions
+        const exportCanvas = document.createElement("canvas");
+        exportCanvas.width = gridWidth;
+        exportCanvas.height = gridHeight;
+        const ctx = exportCanvas.getContext("2d");
+
+        if (!ctx) {
+            console.error("Failed to get canvas context");
+            return;
+        }
+
+        // Clear the canvas with white background
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, gridWidth, gridHeight);
+
+        // Draw the grid
+        drawGridToCanvas(ctx, gridWidth, gridHeight);
+
+        // Create filename with timestamp
+        const timestamp = new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replace(/:/g, "-");
+        const filename = `grid-map-${gridState.cols}x${gridState.rows}-${timestamp}.webp`;
+
+        // Convert canvas to WebP blob and download
+        exportCanvas.toBlob(
+            (blob) => {
+                if (!blob) {
+                    console.error("Failed to create blob");
+                    return;
+                }
+
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            },
+            "image/webp",
+            0.95
+        );
+    };
+
+    // Add this helper function to draw the grid
+    const drawGridToCanvas = (
+        ctx: CanvasRenderingContext2D,
+        width: number,
+        height: number
+    ) => {
+        const {
+            cols,
+            rows,
+            tileSize,
+            borderWidth,
+            borderColor,
+            biomeGrid,
+            gridType,
+        } = gridState;
+
+        // Draw borders
+        if (borderWidth > 0) {
+            ctx.fillStyle = borderColor;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        // Draw tiles
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const biome = biomeGrid[row]?.[col];
+                if (!biome) continue;
+
+                let x, y;
+
+                if (gridType.includes("hex")) {
+                    // Hexagonal grid positioning
+                    const hexWidth = tileSize;
+                    const hexHeight = tileSize * 0.866; // √3/2
+                    x = borderWidth + col * hexWidth * 0.75;
+                    y =
+                        borderWidth +
+                        row * hexHeight +
+                        (col % 2) * (hexHeight / 2);
+                } else {
+                    // Square grid positioning
+                    x = borderWidth + col * (tileSize + borderWidth);
+                    y = borderWidth + row * (tileSize + borderWidth);
+                }
+
+                // Set fill color based on biome
+                ctx.fillStyle = getBiomeColor(biome);
+
+                if (gridType.includes("hex")) {
+                    drawHexagon(
+                        ctx,
+                        x + tileSize / 2,
+                        y + tileSize / 2,
+                        tileSize / 2
+                    );
+                } else {
+                    ctx.fillRect(x, y, tileSize, tileSize);
+                }
+            }
+        }
+    };
+
+    // Helper function to get biome colors (you'll need to implement this based on your biome system)
+    const getBiomeColor = (biome: string): string => {
+        // This should match your biome color mapping
+        const biomeColors: Record<string, string> = {
+            forest: "#228B22",
+            desert: "#F4A460",
+            water: "#4682B4",
+            mountain: "#696969",
+            grassland: "#9ACD32",
+            // Add more biome colors as needed
+        };
+        return biomeColors[biome] || "#CCCCCC";
+    };
+
+    // Helper function to draw hexagon
+    const drawHexagon = (
+        ctx: CanvasRenderingContext2D,
+        x: number,
+        y: number,
+        radius: number
+    ) => {
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            const hx = x + radius * Math.cos(angle);
+            const hy = y + radius * Math.sin(angle);
+            if (i === 0) {
+                ctx.moveTo(hx, hy);
+            } else {
+                ctx.lineTo(hx, hy);
+            }
+        }
+        ctx.closePath();
+        ctx.fill();
+    };
+
     const canvasInteraction = useCanvasInteraction({
         gridType: gridState.gridType,
         cols: gridState.cols,
@@ -203,6 +358,7 @@ const CanvasGridContent: React.FC = () => {
                     onZoomOut={viewState.zoomOut}
                     onResetView={viewState.resetView}
                     onResetCanvas={gridState.resetCanvas}
+                    onDownloadCanvas={handleDownloadCanvas}
                     zoomLevel={viewState.zoomLevel}
                 />
             </div>

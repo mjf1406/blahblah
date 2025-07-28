@@ -12,6 +12,7 @@ import {
     ZoomIn,
     ZoomOut,
     Move,
+    Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +32,7 @@ interface ToolPaletteProps {
     onZoomOut: () => void;
     onResetView: () => void;
     onResetCanvas: () => void;
+    onDownloadCanvas: () => void;
     zoomLevel: number;
 }
 
@@ -41,6 +43,7 @@ const ToolPalette: React.FC<ToolPaletteProps> = ({
     onZoomOut,
     onResetView,
     onResetCanvas,
+    onDownloadCanvas,
     zoomLevel,
 }) => {
     const tools = [
@@ -50,24 +53,6 @@ const ToolPalette: React.FC<ToolPaletteProps> = ({
             label: "Select Tool",
             description: "Default selection tool",
         },
-        // {
-        //     id: "paint" as Tool,
-        //     icon: Paintbrush,
-        //     label: "Paint Tool",
-        //     description: "Left click to paint tiles",
-        // },
-        // {
-        //     id: "erase" as Tool,
-        //     icon: Eraser,
-        //     label: "Erase Tool",
-        //     description: "Left click to erase tiles",
-        // },
-        // {
-        //     id: "pan" as Tool,
-        //     icon: Hand,
-        //     label: "Pan Tool",
-        //     description: "Click and drag to pan the view",
-        // },
     ];
 
     const actions = [
@@ -98,6 +83,16 @@ const ToolPalette: React.FC<ToolPaletteProps> = ({
             label: "Reset Canvas",
             description: "Clear all painted tiles",
             onClick: onResetCanvas,
+        },
+    ];
+
+    const downloadActions = [
+        {
+            id: "download-webp",
+            icon: Download,
+            label: "Download as WebP",
+            description: "Download the canvas as a WebP image",
+            onClick: onDownloadCanvas,
         },
     ];
 
@@ -181,6 +176,46 @@ const ToolPalette: React.FC<ToolPaletteProps> = ({
                             Actions
                         </div>
                         {actions.map((action) => {
+                            const Icon = action.icon;
+                            return (
+                                <Tooltip key={action.id}>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="justify-center gap-1"
+                                            onClick={action.onClick}
+                                        >
+                                            <Icon className="w-4 h-4" />
+                                            <span className="sr-only">
+                                                {action.label}
+                                            </span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        side="left"
+                                        className="max-w-xs"
+                                    >
+                                        <div>
+                                            <div className="font-medium">
+                                                {action.label}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                {action.description}
+                                            </div>
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            );
+                        })}
+
+                        <Separator className="my-2" />
+
+                        {/* Download Section */}
+                        <div className="py-1 text-xs font-medium text-center text-gray-500">
+                            Export
+                        </div>
+                        {downloadActions.map((action) => {
                             const Icon = action.icon;
                             return (
                                 <Tooltip key={action.id}>
