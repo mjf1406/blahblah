@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 
-const MIN_ZOOM = 0.01;
+const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 5.0;
 
 export const useViewState = () => {
