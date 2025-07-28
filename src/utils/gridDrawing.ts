@@ -169,12 +169,13 @@ export const drawHexGrid = (
 ) => {
     const flat = gridType.startsWith("hex-flat");
     const odd = gridType.endsWith("odd");
-    const r = tileSize / 2;
-    const d = 2 * r;
-    const s = Math.sqrt(3) * r;
-    const a = r;
-    const tSquared = a * a - (s / 2) * (s / 2);
-    const t = Math.sqrt(tSquared);
+    const s = tileSize;               // s = tileSize
+// Then the radius from center to vertex is:
+const r = s / Math.sqrt(3);                 // r = s / √3
+const d = 2 * r;                             // diameter = 2r
+const a = r;                                 // same as r
+const tSquared = a * a - (s / 2) * (s / 2);  // same calculation for t
+const t = Math.sqrt(tSquared);
 
     const hexW = flat ? d : s;
     const hexH = flat ? s : d;

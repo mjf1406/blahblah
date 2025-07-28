@@ -1,6 +1,6 @@
 /** @format */
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { ChevronRight, ChevronLeft, Dices } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,6 +23,7 @@ import { useGridState } from "@/hooks/useGridState";
 import { useViewState } from "@/hooks/useViewState";
 import { useCanvasInteraction } from "@/hooks/useCanvasInteraction";
 import { detectWebGL } from "@/lib/utils";
+import { drawHexGrid, drawSquareGrid } from "@/utils/gridDrawing";
 
 // Constants
 const MIN_TILE_SIZE = 10;
@@ -53,160 +54,99 @@ const CanvasGridContent: React.FC = () => {
     const gridState = useGridState();
     const viewState = useViewState();
 
-    // Add this function inside CanvasGridContent component
-    const handleDownloadCanvas = () => {
-        // Calculate the actual grid dimensions
-        const gridWidth =
-            gridState.cols * gridState.tileSize +
-            (gridState.cols + 1) * gridState.borderWidth;
-        const gridHeight =
-            gridState.rows * gridState.tileSize +
-            (gridState.rows + 1) * gridState.borderWidth;
+    const handleDownloadCanvas = useCallback(() => {
+    // Calculate actual grid dimensions without zoom/pan
+    let totalWidth: number;
+    let totalHeight: number;
 
-        // Create a new canvas with exact grid dimensions
-        const exportCanvas = document.createElement("canvas");
-        exportCanvas.width = gridWidth;
-        exportCanvas.height = gridHeight;
-        const ctx = exportCanvas.getContext("2d");
+    if (gridState.gridType === 'square') {
+        totalWidth = gridState.cols * (gridState.tileSize + gridState.borderWidth) + gridState.borderWidth;
+        totalHeight = gridState.rows * (gridState.tileSize + gridState.borderWidth) + gridState.borderWidth;
+    } else {
+        // Hex grid calculations
+        const flat = gridState.gridType.startsWith('hex-flat');
+        const s = gridState.tileSize;               // s = tileSize
+// Then the radius from center to vertex is:
+const r = s / Math.sqrt(3);                 // r = s / √3
+const d = 2 * r;                             // diameter = 2r
+const a = r;                                 // same as r
+const tSquared = a * a - (s / 2) * (s / 2);  // same calculation for t
+const t = Math.sqrt(tSquared);
 
-        if (!ctx) {
-            console.error("Failed to get canvas context");
-            return;
+        if (flat) {
+            totalWidth = gridState.borderWidth * 2 + (d - t) * gridState.cols - t + d / 2;
+            totalHeight = gridState.borderWidth * 2 + s * gridState.rows + s / 2;
+        } else {
+            totalWidth = gridState.borderWidth * 2 + s * gridState.cols + s / 2;
+            totalHeight = gridState.borderWidth * 2 + (d - t) * gridState.rows - t + d / 2;
+        }
+    }
+
+    // Create offscreen canvas with actual grid dimensions
+    const offscreenCanvas = new OffscreenCanvas(Math.ceil(totalWidth), Math.ceil(totalHeight));
+    const ctx = offscreenCanvas.getContext('2d');
+    
+    if (!ctx) {
+        console.error('Failed to get offscreen canvas context');
+        return;
+    }
+
+    // Clear the canvas with white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, totalWidth, totalHeight);
+
+    try {
+        // Draw based on grid type
+        if (gridState.gridType === 'square') {
+            drawSquareGrid(
+                ctx,
+                gridState.cols,
+                gridState.rows,
+                gridState.tileSize,
+                gridState.biomeGrid,
+                gridState.borderWidth,
+                gridState.borderColor
+            );
+        } else {
+            drawHexGrid(
+                ctx,
+                gridState.gridType,
+                gridState.cols,
+                gridState.rows,
+                gridState.tileSize,
+                gridState.biomeGrid,
+                gridState.borderWidth,
+                gridState.borderColor
+            );
         }
 
-        // Clear the canvas with white background
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, gridWidth, gridHeight);
+        // Convert to blob and download
+        offscreenCanvas.convertToBlob({ 
+            type: 'image/webp', 
+            quality: 0.95 
+        }).then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            // Generate filename with timestamp and grid info
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+            const gridInfo = `${gridState.gridType}_${gridState.cols}x${gridState.rows}`;
+            a.download = `grid_${gridInfo}_${timestamp}.webp`;
+            
+            // Trigger download
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }).catch(error => {
+            console.error('Failed to convert canvas to blob:', error);
+        });
 
-        // Draw the grid
-        drawGridToCanvas(ctx, gridWidth, gridHeight);
-
-        // Create filename with timestamp
-        const timestamp = new Date()
-            .toISOString()
-            .slice(0, 19)
-            .replace(/:/g, "-");
-        const filename = `grid-map-${gridState.cols}x${gridState.rows}-${timestamp}.webp`;
-
-        // Convert canvas to WebP blob and download
-        exportCanvas.toBlob(
-            (blob) => {
-                if (!blob) {
-                    console.error("Failed to create blob");
-                    return;
-                }
-
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement("a");
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            },
-            "image/webp",
-            0.95
-        );
-    };
-
-    // Add this helper function to draw the grid
-    const drawGridToCanvas = (
-        ctx: CanvasRenderingContext2D,
-        width: number,
-        height: number
-    ) => {
-        const {
-            cols,
-            rows,
-            tileSize,
-            borderWidth,
-            borderColor,
-            biomeGrid,
-            gridType,
-        } = gridState;
-
-        // Draw borders
-        if (borderWidth > 0) {
-            ctx.fillStyle = borderColor;
-            ctx.fillRect(0, 0, width, height);
-        }
-
-        // Draw tiles
-        for (let row = 0; row < rows; row++) {
-            for (let col = 0; col < cols; col++) {
-                const biome = biomeGrid[row]?.[col];
-                if (!biome) continue;
-
-                let x, y;
-
-                if (gridType.includes("hex")) {
-                    // Hexagonal grid positioning
-                    const hexWidth = tileSize;
-                    const hexHeight = tileSize * 0.866; // √3/2
-                    x = borderWidth + col * hexWidth * 0.75;
-                    y =
-                        borderWidth +
-                        row * hexHeight +
-                        (col % 2) * (hexHeight / 2);
-                } else {
-                    // Square grid positioning
-                    x = borderWidth + col * (tileSize + borderWidth);
-                    y = borderWidth + row * (tileSize + borderWidth);
-                }
-
-                // Set fill color based on biome
-                ctx.fillStyle = getBiomeColor(biome);
-
-                if (gridType.includes("hex")) {
-                    drawHexagon(
-                        ctx,
-                        x + tileSize / 2,
-                        y + tileSize / 2,
-                        tileSize / 2
-                    );
-                } else {
-                    ctx.fillRect(x, y, tileSize, tileSize);
-                }
-            }
-        }
-    };
-
-    // Helper function to get biome colors (you'll need to implement this based on your biome system)
-    const getBiomeColor = (biome: string): string => {
-        // This should match your biome color mapping
-        const biomeColors: Record<string, string> = {
-            forest: "#228B22",
-            desert: "#F4A460",
-            water: "#4682B4",
-            mountain: "#696969",
-            grassland: "#9ACD32",
-            // Add more biome colors as needed
-        };
-        return biomeColors[biome] || "#CCCCCC";
-    };
-
-    // Helper function to draw hexagon
-    const drawHexagon = (
-        ctx: CanvasRenderingContext2D,
-        x: number,
-        y: number,
-        radius: number
-    ) => {
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i * Math.PI) / 3;
-            const hx = x + radius * Math.cos(angle);
-            const hy = y + radius * Math.sin(angle);
-            if (i === 0) {
-                ctx.moveTo(hx, hy);
-            } else {
-                ctx.lineTo(hx, hy);
-            }
-        }
-        ctx.closePath();
-        ctx.fill();
-    };
+    } catch (error) {
+        console.error('Failed to render grid for download:', error);
+    }
+}, [gridState]);
 
     const canvasInteraction = useCanvasInteraction({
         gridType: gridState.gridType,
