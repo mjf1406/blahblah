@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { ChevronRight, ChevronLeft, Dices } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
     Sidebar,
     SidebarContent,
@@ -16,6 +17,7 @@ import { DimensionControls } from "@/components/canvas-grid/DimensionControls";
 import { TileSizeControls } from "@/components/canvas-grid/TileSizeControls";
 import { BorderControls } from "@/components/canvas-grid/BorderControls";
 import { BiomeBrush, BIOMES } from "@/components/canvas-grid/BiomeBrush";
+import ToolPalette, { Tool } from "@/components/canvas-grid/ToolPalette";
 import {
     saveGridConfig,
     getGridConfig,
@@ -31,6 +33,8 @@ const MAX_GRID_HEIGHT = 200;
 const MAX_CANVAS_SIZE = 100000;
 const MIN_PPI = 10;
 const MAX_PPI = 200;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 5.0;
 
 export type GridType =
     | "square"
@@ -104,11 +108,17 @@ const getGridCoordinates = (
     rows: number,
     tileSize: number,
     borderWidth: number,
-    scale: number
+    scale: number,
+    panOffset: { x: number; y: number },
+    zoomLevel: number
 ): { col: number; row: number } | null => {
+    // Apply inverse transforms to get actual grid coordinates
+    const adjustedX = (mouseX - panOffset.x) / zoomLevel;
+    const adjustedY = (mouseY - panOffset.y) / zoomLevel;
+
     // Adjust for scale and border
-    const x = mouseX / scale - borderWidth;
-    const y = mouseY / scale - borderWidth;
+    const x = adjustedX / scale - borderWidth;
+    const y = adjustedY / scale - borderWidth;
 
     if (gridType === "square") {
         const col = Math.floor(x / tileSize);
@@ -198,7 +208,7 @@ const drawSquareGrid = (
     cols: number,
     rows: number,
     tileSize: number,
-    biomeGrid: string[][],
+    biomeGrid: (string | null)[][],
     borderWidth: number,
     borderColor: string
 ) => {
@@ -229,7 +239,7 @@ const drawHexGrid = (
     cols: number,
     rows: number,
     tileSize: number,
-    biomeGrid: string[][],
+    biomeGrid: (string | null)[][],
     borderWidth: number,
     borderColor: string
 ) => {
@@ -259,7 +269,7 @@ const drawHexGrid = (
                 cy,
                 r,
                 flat,
-                biomeGrid[row]?.[col],
+                biomeGrid[row]?.[col] || undefined,
                 borderWidth,
                 borderColor
             );
@@ -276,9 +286,19 @@ const CanvasGridContent: React.FC = () => {
     const [ppi, setPpi] = useState(80);
     const [borderWidth, setBorderWidth] = useState(1);
     const [borderColor, setBorderColor] = useState("#000000");
-    const [biomeGrid, setBiomeGrid] = useState<string[][]>([]);
+    const [biomeGrid, setBiomeGrid] = useState<(string | null)[][]>([]);
     const [selectedBiome, setSelectedBiome] = useState<string | null>(null);
+    const [selectedTool, setSelectedTool] = useState<Tool>("paint");
+
+    // Drawing and interaction state
     const [isDrawing, setIsDrawing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isPanning, setIsPanning] = useState(false);
+    const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
+
+    // View state
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const [zoomLevel, setZoomLevel] = useState(1);
 
     // Track if user has made manual changes
     const [hasManualChanges, setHasManualChanges] = useState(false);
@@ -374,8 +394,32 @@ const CanvasGridContent: React.FC = () => {
         setBorderColor(value);
     };
 
+    // Tool palette handlers
+    const handleZoomIn = () => {
+        const newZoom = Math.min(MAX_ZOOM, zoomLevel * 1.2);
+        setZoomLevel(newZoom);
+    };
+
+    const handleZoomOut = () => {
+        const newZoom = Math.max(MIN_ZOOM, zoomLevel * 0.8);
+        setZoomLevel(newZoom);
+    };
+
+    const handleResetView = () => {
+        setPanOffset({ x: 0, y: 0 });
+        setZoomLevel(1);
+    };
+
+    const handleResetCanvas = () => {
+        setBiomeGrid(
+            Array(rows)
+                .fill(null)
+                .map(() => Array(cols).fill(null))
+        );
+    };
+
     const generateBiomeGrid = useCallback(() => {
-        const grid: string[][] = [];
+        const grid: (string | null)[][] = [];
         for (let r = 0; r < rows; r++) {
             grid[r] = [];
             for (let c = 0; c < cols; c++) {
@@ -394,9 +438,7 @@ const CanvasGridContent: React.FC = () => {
         rows: number;
         displayName: string;
     }) => {
-        // Reset manual changes flag when applying presets
         setHasManualChanges(false);
-
         setPpi(presetData.ppi);
         setTileSize(presetData.tileSize);
         setCols(presetData.cols);
@@ -405,9 +447,11 @@ const CanvasGridContent: React.FC = () => {
     };
 
     const paintTile = useCallback(
-        (mouseX: number, mouseY: number) => {
-            if (!selectedBiome) return;
-
+        (
+            mouseX: number,
+            mouseY: number,
+            biomeColor: string | null = selectedBiome
+        ) => {
             const { scale } = calculateGridDimensions(
                 gridType,
                 cols,
@@ -424,40 +468,139 @@ const CanvasGridContent: React.FC = () => {
                 rows,
                 tileSize,
                 borderWidth,
-                scale
+                scale,
+                panOffset,
+                zoomLevel
             );
 
             if (coords) {
                 setBiomeGrid((prev) => {
                     const newGrid = [...prev];
                     if (!newGrid[coords.row]) newGrid[coords.row] = [];
-                    newGrid[coords.row][coords.col] = selectedBiome;
+                    newGrid[coords.row][coords.col] = biomeColor;
                     return newGrid;
                 });
             }
         },
-        [selectedBiome, gridType, cols, rows, tileSize, borderWidth]
+        [
+            selectedBiome,
+            gridType,
+            cols,
+            rows,
+            tileSize,
+            borderWidth,
+            panOffset,
+            zoomLevel,
+        ]
     );
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!selectedBiome || e.button !== 0) return;
-        setIsDrawing(true);
         const rect = canvasRef.current?.getBoundingClientRect();
-        if (rect) {
-            paintTile(e.clientX - rect.left, e.clientY - rect.top);
+        if (!rect) return;
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        if (e.button === 0) {
+            // Left click behavior based on selected tool
+            if (selectedTool === "paint" && selectedBiome) {
+                setIsDrawing(true);
+                paintTile(mouseX, mouseY);
+            } else if (selectedTool === "erase") {
+                setIsDeleting(true);
+                paintTile(mouseX, mouseY, null);
+            } else if (selectedTool === "pan") {
+                setIsPanning(true);
+                setLastPanPoint({ x: mouseX, y: mouseY });
+            }
+        } else if (e.button === 1) {
+            // Middle click - always pan
+            e.preventDefault();
+            setIsPanning(true);
+            setLastPanPoint({ x: mouseX, y: mouseY });
+        } else if (e.button === 2) {
+            // Right click - always erase
+            e.preventDefault();
+            setIsDeleting(true);
+            paintTile(mouseX, mouseY, null);
         }
     };
 
     const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if (!isDrawing || !selectedBiome) return;
         const rect = canvasRef.current?.getBoundingClientRect();
-        if (rect) {
-            paintTile(e.clientX - rect.left, e.clientY - rect.top);
+        if (!rect) return;
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        if (isDrawing && selectedBiome && e.buttons === 1) {
+            // Left button held - continue painting
+            paintTile(mouseX, mouseY);
+        } else if (isDeleting && e.buttons === 2) {
+            // Right button held - continue deleting
+            paintTile(mouseX, mouseY, null);
+        } else if (isPanning && (e.buttons === 4 || e.buttons === 1)) {
+            // Middle button or left button (when pan tool is selected) held - pan
+            const deltaX = mouseX - lastPanPoint.x;
+            const deltaY = mouseY - lastPanPoint.y;
+
+            setPanOffset((prev) => ({
+                x: prev.x + deltaX,
+                y: prev.y + deltaY,
+            }));
+
+            setLastPanPoint({ x: mouseX, y: mouseY });
         }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if (e.button === 0) {
+            // Left button
+            setIsDrawing(false);
+            setIsPanning(false);
+        } else if (e.button === 1) {
+            // Middle button
+            setIsPanning(false);
+        } else if (e.button === 2) {
+            // Right button
+            setIsDeleting(false);
+        }
+    };
+
+    const handleMouseLeave = () => {
         setIsDrawing(false);
+        setIsDeleting(false);
+        setIsPanning(false);
+    };
+
+    const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+        e.preventDefault();
+
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        const newZoom = Math.max(
+            MIN_ZOOM,
+            Math.min(MAX_ZOOM, zoomLevel * zoomFactor)
+        );
+
+        if (newZoom !== zoomLevel) {
+            // Zoom towards mouse position
+            const zoomRatio = newZoom / zoomLevel;
+            setPanOffset((prev) => ({
+                x: mouseX - (mouseX - prev.x) * zoomRatio,
+                y: mouseY - (mouseY - prev.y) * zoomRatio,
+            }));
+            setZoomLevel(newZoom);
+        }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent context menu
     };
 
     useEffect(generateBiomeGrid, [generateBiomeGrid]);
@@ -476,12 +619,18 @@ const CanvasGridContent: React.FC = () => {
             borderWidth
         );
 
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+
+        // Apply pan and zoom transforms
+        ctx.translate(panOffset.x, panOffset.y);
+        ctx.scale(zoomLevel, zoomLevel);
 
         if (scale < 1) {
-            ctx.save();
             ctx.scale(scale, scale);
         }
 
@@ -508,125 +657,163 @@ const CanvasGridContent: React.FC = () => {
             );
         }
 
-        if (scale < 1) ctx.restore();
-    }, [gridType, cols, rows, tileSize, borderWidth, borderColor, biomeGrid]);
+        ctx.restore();
+    }, [
+        gridType,
+        cols,
+        rows,
+        tileSize,
+        borderWidth,
+        borderColor,
+        biomeGrid,
+        panOffset,
+        zoomLevel,
+    ]);
 
     useEffect(drawGrid, [drawGrid]);
 
     // Custom cursor style
-    const cursorStyle = selectedBiome
-        ? {
-              cursor: `url("data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='8' fill='${encodeURIComponent(
-                  selectedBiome
-              )}' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") 10 10, crosshair`,
-          }
-        : { cursor: "default" };
+    const getCursorStyle = () => {
+        if (isPanning || selectedTool === "pan") return { cursor: "grab" };
+        if (isDeleting || selectedTool === "erase")
+            return { cursor: "crosshair" };
+        if (selectedTool === "select") return { cursor: "default" };
+        if (selectedTool === "paint" && !selectedBiome)
+            return { cursor: "not-allowed" };
+        if (selectedTool === "paint" && selectedBiome) {
+            return {
+                cursor: `url("data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='8' fill='${encodeURIComponent(
+                    selectedBiome
+                )}' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E") 10 10, crosshair`,
+            };
+        }
+        return { cursor: "default" };
+    };
 
     return (
-        <div className="relative flex w-full">
-            {/* Sidebar */}
-            <div className="relative">
-                <Sidebar
-                    className={`mt-16 transition-transform duration-300 ease-in-out ${
-                        !open ? "-translate-x-full" : "translate-x-0"
-                    }`}
-                >
-                    <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-3 border-b">
-                        <h2 className="text-lg font-semibold">Grid Controls</h2>
-                        <div className="flex gap-1">
-                            <Button
-                                size={"icon"}
-                                variant={"outline"}
-                            >
-                                <Dices />
-                            </Button>
-                            <DisplayPresets
-                                currentGridType={gridType}
-                                onPresetSelect={handlePresetSelect}
+        <TooltipProvider>
+            <div className="relative flex w-full overflow-y-hidden">
+                {/* Sidebar */}
+                <div className="relative">
+                    <Sidebar
+                        className={`mt-16 transition-transform duration-300 ease-in-out ${
+                            !open ? "-translate-x-full" : "translate-x-0"
+                        }`}
+                    >
+                        <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-3 border-b">
+                            <h2 className="text-lg font-semibold">
+                                Grid Controls
+                            </h2>
+                            <div className="flex gap-1">
+                                <Button
+                                    size={"icon"}
+                                    variant={"outline"}
+                                    onClick={generateBiomeGrid}
+                                >
+                                    <Dices />
+                                </Button>
+                                <DisplayPresets
+                                    currentGridType={gridType}
+                                    onPresetSelect={handlePresetSelect}
+                                />
+                            </div>
+                        </SidebarHeader>
+                        <SidebarContent className="p-4 space-y-3 overflow-y-auto">
+                            <GridTypeSelector
+                                gridType={gridType}
+                                onGridTypeChange={setGridType}
                             />
-                        </div>
-                    </SidebarHeader>
-                    <SidebarContent className="p-4 space-y-3 overflow-y-auto">
-                        <GridTypeSelector
-                            gridType={gridType}
-                            onGridTypeChange={setGridType}
-                        />
 
-                        <DimensionControls
-                            cols={cols}
-                            rows={rows}
-                            onColsChange={handleColsChange}
-                            onRowsChange={handleRowsChange}
-                            maxCols={MAX_GRID_WIDTH}
-                            maxRows={MAX_GRID_HEIGHT}
-                        />
+                            <DimensionControls
+                                cols={cols}
+                                rows={rows}
+                                onColsChange={handleColsChange}
+                                onRowsChange={handleRowsChange}
+                                maxCols={MAX_GRID_WIDTH}
+                                maxRows={MAX_GRID_HEIGHT}
+                            />
 
-                        <TileSizeControls
-                            tileSize={tileSize}
-                            ppi={ppi}
-                            onTileSizeChange={handleTileSizeChange}
-                            onPpiChange={handlePpiChange}
-                            minTileSize={MIN_TILE_SIZE}
-                            maxTileSize={MAX_TILE_SIZE}
-                            minPpi={MIN_PPI}
-                            maxPpi={MAX_PPI}
-                        />
+                            <TileSizeControls
+                                tileSize={tileSize}
+                                ppi={ppi}
+                                onTileSizeChange={handleTileSizeChange}
+                                onPpiChange={handlePpiChange}
+                                minTileSize={MIN_TILE_SIZE}
+                                maxTileSize={MAX_TILE_SIZE}
+                                minPpi={MIN_PPI}
+                                maxPpi={MAX_PPI}
+                            />
 
-                        <BorderControls
-                            borderWidth={borderWidth}
-                            borderColor={borderColor}
-                            onBorderWidthChange={handleBorderWidthChange}
-                            onBorderColorChange={handleBorderColorChange}
-                        />
+                            <BorderControls
+                                borderWidth={borderWidth}
+                                borderColor={borderColor}
+                                onBorderWidthChange={handleBorderWidthChange}
+                                onBorderColorChange={handleBorderColorChange}
+                            />
 
-                        <Button
-                            onClick={generateBiomeGrid}
-                            className="w-full"
-                        >
-                            Regenerate Biomes
-                        </Button>
+                            <Button
+                                onClick={generateBiomeGrid}
+                                className="w-full"
+                            >
+                                Regenerate Biomes
+                            </Button>
 
-                        <BiomeBrush
-                            selectedBiome={selectedBiome}
-                            onBiomeSelect={setSelectedBiome}
-                        />
-                    </SidebarContent>
-                </Sidebar>
+                            <BiomeBrush
+                                selectedBiome={selectedBiome}
+                                onBiomeSelect={setSelectedBiome}
+                            />
+                        </SidebarContent>
+                    </Sidebar>
 
-                {/* Toggle Button */}
-                <Button
-                    onClick={() => setOpen(!open)}
-                    className={`fixed top-1/2 transform -translate-y-1/2 w-8 h-16 p-0 rounded-r-md rounded-l-none bg-white border hover:bg-gray-50 z-50 transition-all duration-300 ease-in-out ${
-                        open ? "left-64" : "left-0"
-                    }`}
-                    style={{ marginTop: "4rem" }}
-                >
-                    {open ? (
-                        <ChevronLeft className="w-4 h-4 text-gray-600" />
-                    ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                    )}
-                </Button>
-            </div>
-
-            {/* Main Content */}
-            <div
-                className={`flex-1 h-full overflow-auto transition-all mr-4 duration-300 ease-in-out ${
-                    open ? "ml-0" : "ml-0"
-                }`}
-            >
-                <div className="flex items-start justify-start w-full h-full p-4">
-                    <canvas
-                        ref={canvasRef}
-                        style={cursorStyle}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onMouseLeave={handleMouseUp}
-                    />
+                    {/* Toggle Button */}
+                    <Button
+                        onClick={() => setOpen(!open)}
+                        className={`fixed top-1/2 transform -translate-y-1/2 w-8 h-16 p-0 rounded-r-md rounded-l-none bg-white border hover:bg-gray-50 z-50 transition-all duration-300 ease-in-out ${
+                            open ? "left-64" : "left-0"
+                        }`}
+                        style={{ marginTop: "4rem" }}
+                    >
+                        {open ? (
+                            <ChevronLeft className="w-4 h-4 text-gray-600" />
+                        ) : (
+                            <ChevronRight className="w-4 h-4 text-gray-600" />
+                        )}
+                    </Button>
                 </div>
+
+                {/* Main Content */}
+                <div
+                    className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${
+                        open ? "ml-0" : "ml-0"
+                    }`}
+                >
+                    <div className="flex items-center justify-center flex-1 overflow-hidden bg-gray-200">
+                        <canvas
+                            ref={canvasRef}
+                            className="w-full h-full"
+                            style={getCursorStyle()}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseLeave}
+                            onWheel={handleWheel}
+                            onContextMenu={handleContextMenu}
+                        />
+                    </div>
+                </div>
+
+                {/* Tool Palette */}
+                <ToolPalette
+                    selectedTool={selectedTool}
+                    onToolSelect={setSelectedTool}
+                    onZoomIn={handleZoomIn}
+                    onZoomOut={handleZoomOut}
+                    onResetView={handleResetView}
+                    onResetCanvas={handleResetCanvas}
+                    zoomLevel={zoomLevel}
+                />
             </div>
-        </div>
+        </TooltipProvider>
     );
 };
 
