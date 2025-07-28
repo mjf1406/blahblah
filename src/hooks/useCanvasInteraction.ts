@@ -181,7 +181,7 @@ export const useCanvasInteraction = ({
 
     const handleWheel = useCallback(
         (e: React.WheelEvent<HTMLCanvasElement>) => {
-            e.preventDefault();
+            // e.preventDefault();
 
             const rect = e.currentTarget.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;

@@ -22,26 +22,15 @@ import { GridCanvas } from "@/components/canvas-grid/GridCanvas";
 import { useGridState } from "@/hooks/useGridState";
 import { useViewState } from "@/hooks/useViewState";
 import { useCanvasInteraction } from "@/hooks/useCanvasInteraction";
+import { detectWebGL } from "@/lib/utils";
 
 // Constants
 const MIN_TILE_SIZE = 10;
 const MAX_TILE_SIZE = 200;
 const MIN_PPI = 10;
 const MAX_PPI = 200;
-
-// WebGL detection utility
-const detectWebGL = (): boolean => {
-    // return false;
-    try {
-        const canvas = document.createElement("canvas");
-        const gl =
-            canvas.getContext("webgl") ||
-            canvas.getContext("experimental-webgl");
-        return !!(gl && gl instanceof WebGLRenderingContext);
-    } catch (e) {
-        return false;
-    }
-};
+const MAX_TILES_NO_WEBGL = 100;
+const MAX_TILES_WEBGL = 50000;
 
 const CanvasGridContent: React.FC = () => {
     const [selectedBiome, setSelectedBiome] = useState<string | null>(null);
@@ -52,8 +41,10 @@ const CanvasGridContent: React.FC = () => {
     const { maxGridWidth, maxGridHeight, hasWebGL } = useMemo(() => {
         const webGLSupported = detectWebGL();
         return {
-            maxGridWidth: webGLSupported ? 20000 : 100,
-            maxGridHeight: webGLSupported ? 20000 : 100,
+            maxGridWidth: webGLSupported ? MAX_TILES_WEBGL : MAX_TILES_NO_WEBGL,
+            maxGridHeight: webGLSupported
+                ? MAX_TILES_WEBGL
+                : MAX_TILES_NO_WEBGL,
             hasWebGL: webGLSupported,
         };
     }, []);
