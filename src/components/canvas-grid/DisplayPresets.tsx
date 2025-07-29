@@ -28,6 +28,7 @@ import {
     type GridConfigType,
 } from "@/utils/gridConfigStorage";
 import { GridType } from "@/hooks/useGridState";
+import { getHexagonProperties, HexagonProperties } from "@/utils/hexagon";
 
 const TV_SIZES = [
     { label: '24"', inches: 24 },
@@ -112,24 +113,40 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
     const calculateGridDimensions = (
         physicalWidthInches: number,
         physicalHeightInches: number,
-        tileSize: number,
+        tileSizeInches: number, 
         configType: GridConfigType
     ) => {
         let cols, rows;
 
         switch (configType) {
             case "square":
-                cols = Math.floor(physicalWidthInches / tileSize);
-                rows = Math.floor(physicalHeightInches / tileSize);
+                cols = Math.floor(physicalWidthInches / tileSizeInches);
+                rows = Math.floor(physicalHeightInches / tileSizeInches);
                 break;
-            case "hex-flat":
-                cols = Math.floor((physicalWidthInches / tileSize) * 1.25);
-                rows = Math.floor((physicalHeightInches / tileSize) * 1.1);
+            case "hex-flat": {
+                const hexProps = getHexagonProperties(tileSizeInches);
+                const hexWidth = hexProps.d;
+                const hexHeight = hexProps.s;
+                                
+                const horizontalSpacing = hexWidth * 0.75;
+                const verticalSpacing = hexHeight;
+                
+                cols = Math.floor(physicalWidthInches / horizontalSpacing);
+                rows = Math.floor(physicalHeightInches / verticalSpacing);
                 break;
-            case "hex-pointy":
-                cols = Math.floor((physicalWidthInches / tileSize) * 1.1);
-                rows = Math.floor((physicalHeightInches / tileSize) * 1.25);
+            }
+            case "hex-pointy": {
+                const hexProps = getHexagonProperties(tileSizeInches);
+                const hexWidth = hexProps.s; // long diagonal (width) 
+                const hexHeight = hexProps.d; // short diagonal (height)
+                
+                const horizontalSpacing = hexWidth;
+                const verticalSpacing = hexHeight * 0.75;
+                
+                cols = Math.floor(physicalWidthInches / horizontalSpacing);
+                rows = Math.floor(physicalHeightInches / verticalSpacing);
                 break;
+            }
         }
 
         return { cols, rows };

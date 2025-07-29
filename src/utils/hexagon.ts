@@ -2,7 +2,7 @@
 
 import { GridType } from "@/hooks/useGridState";
 
-interface HexagonProperties {
+export interface HexagonProperties {
     // https://www.omnicalculator.com/math/hexagon
     // https://uploads-cdn.omnicalculator.com/images/geometry/area/hexagon-calc-r2.svg?width=425&enlarge=0&format=webp
     // t is the distance from the nearest vertex to s perpendicularly.
