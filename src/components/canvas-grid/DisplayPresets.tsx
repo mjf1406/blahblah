@@ -133,8 +133,13 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
                 const horizontalSpacing = hexWidth * 0.75;
                 const verticalSpacing = hexHeight;
 
-                cols = Math.floor(physicalWidthInches / horizontalSpacing); // 6 too many cols
-                rows = Math.floor(physicalHeightInches / verticalSpacing); // 3 too many rows
+                cols = Math.floor(
+                    physicalWidthInches / horizontalSpacing -
+                        hexProps.d * 5 * 0.75
+                ); // 6 too many cols
+                rows = Math.floor(
+                    physicalHeightInches / verticalSpacing - hexProps.s * 2
+                ); // 3 too many rows
                 break;
             }
             case "hex-pointy": {
@@ -145,8 +150,13 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
                 const horizontalSpacing = hexWidth;
                 const verticalSpacing = hexHeight * 0.75;
 
-                cols = Math.floor(physicalWidthInches / horizontalSpacing); // 4 too many cols
-                rows = Math.floor(physicalHeightInches / verticalSpacing); // 4 too many rows
+                cols = Math.floor(
+                    physicalWidthInches / horizontalSpacing - hexProps.s * 6
+                ); // 4 too many cols
+                rows = Math.floor(
+                    physicalHeightInches / verticalSpacing -
+                        hexProps.d * 5 * 0.75
+                ); // 4 too many rows
                 break;
             }
         }
