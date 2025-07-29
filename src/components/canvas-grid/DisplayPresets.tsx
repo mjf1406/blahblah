@@ -113,7 +113,7 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
     const calculateGridDimensions = (
         physicalWidthInches: number,
         physicalHeightInches: number,
-        tileSizeInches: number, 
+        tileSizeInches: number,
         configType: GridConfigType
     ) => {
         let cols, rows;
@@ -127,24 +127,24 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
                 const hexProps = getHexagonProperties(tileSizeInches);
                 const hexWidth = hexProps.d;
                 const hexHeight = hexProps.s;
-                                
+
                 const horizontalSpacing = hexWidth * 0.75;
                 const verticalSpacing = hexHeight;
-                
-                cols = Math.floor(physicalWidthInches / horizontalSpacing);
-                rows = Math.floor(physicalHeightInches / verticalSpacing);
+
+                cols = Math.floor(physicalWidthInches / horizontalSpacing); // 6 too many cols
+                rows = Math.floor(physicalHeightInches / verticalSpacing); // 3 too many rows
                 break;
             }
             case "hex-pointy": {
                 const hexProps = getHexagonProperties(tileSizeInches);
-                const hexWidth = hexProps.s; // long diagonal (width) 
-                const hexHeight = hexProps.d; // short diagonal (height)
-                
+                const hexWidth = hexProps.s;
+                const hexHeight = hexProps.d;
+
                 const horizontalSpacing = hexWidth;
                 const verticalSpacing = hexHeight * 0.75;
-                
-                cols = Math.floor(physicalWidthInches / horizontalSpacing);
-                rows = Math.floor(physicalHeightInches / verticalSpacing);
+
+                cols = Math.floor(physicalWidthInches / horizontalSpacing); // 4 too many cols
+                rows = Math.floor(physicalHeightInches / verticalSpacing); // 4 too many rows
                 break;
             }
         }
