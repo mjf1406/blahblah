@@ -3,7 +3,8 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { GridType } from "@/hooks/useGridState";
 import { calculateGridDimensions } from "@/utils/gridCoordinates";
-import { drawSquareGrid, drawHexGrid } from "@/utils/gridDrawing";
+import { drawSquareGrid } from "@/utils/square";
+import { drawHexGrid } from "@/utils/hexagon";
 
 interface GridCanvasProps {
     gridType: GridType;

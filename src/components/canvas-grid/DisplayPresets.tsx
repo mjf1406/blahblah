@@ -123,12 +123,12 @@ export const DisplayPresets: React.FC<DisplayPresetsProps> = ({
                 rows = Math.floor(physicalHeightInches / tileSize);
                 break;
             case "hex-flat":
-                cols = Math.floor((physicalWidthInches / tileSize) * 1.3);
-                rows = Math.floor((physicalHeightInches / tileSize) * 1.15);
+                cols = Math.floor((physicalWidthInches / tileSize) * 1.25);
+                rows = Math.floor((physicalHeightInches / tileSize) * 1.1);
                 break;
             case "hex-pointy":
-                cols = Math.floor((physicalWidthInches / tileSize) * 1.15);
-                rows = Math.floor((physicalHeightInches / tileSize) * 1.3);
+                cols = Math.floor((physicalWidthInches / tileSize) * 1.1);
+                rows = Math.floor((physicalHeightInches / tileSize) * 1.25);
                 break;
         }
 

@@ -3,6 +3,8 @@
 // components/grid/TileSizeControls.tsx
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { MAX_PPI, MAX_TILE_SIZE, MIN_PPI, MIN_TILE_SIZE } from "../CanvasGrid";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface TileSizeControlsProps {
     tileSize: number;
@@ -20,19 +22,40 @@ export const TileSizeControls: React.FC<TileSizeControlsProps> = ({
     ppi,
     onTileSizeChange,
     onPpiChange,
-    minTileSize = 10,
-    maxTileSize = 100,
-    minPpi = 40,
-    maxPpi = 140,
+    minTileSize = MIN_TILE_SIZE,
+    maxTileSize = MAX_TILE_SIZE,
+    minPpi = MIN_PPI,
+    maxPpi = MAX_PPI,
 }) => {
     const tileSizeInches = tileSize / ppi;
 
     return (
         <div className="space-y-4">
             <div>
-                <Label className="text-sm font-medium">
-                    Tile Size: {tileSize}px ({tileSizeInches.toFixed(2)}″)
-                </Label>
+                <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                        Tile Size: {tileSize}px ({tileSizeInches.toFixed(2)}″)
+                    </Label>
+                    <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <img
+                                src="/assets/img/fvtt.png"
+                                alt="FoundryVTT icon"
+                                width={16}
+                                height={16}
+                                className="cursor-help"
+                            />
+                        </TooltipTrigger>
+                        <TooltipContent
+                            side="top"
+                            className="max-w-xs"
+                        >
+                            FoundryVTT requires a minimum Tile Size of
+                            50&nbsp;px. We automatically set it to a minimum of
+                            50 upon export, so don't worry 😁
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
                 <Slider
                     value={[tileSize]}
                     onValueChange={(v) => onTileSizeChange(v[0])}
@@ -42,7 +65,7 @@ export const TileSizeControls: React.FC<TileSizeControlsProps> = ({
                     className="mt-2"
                 />
             </div>
-            <div>
+            <div className="hidden">
                 <Label className="text-sm font-medium">PPI: {ppi}</Label>
                 <Slider
                     value={[ppi]}

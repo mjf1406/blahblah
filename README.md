@@ -8,6 +8,10 @@ blah blah
 
 ## Change Log
 
+### 2025/07/29
+
+- BUG: hex math is now proper
+
 ### 2025/07/28
 
 - UX: added tool palette on the right side of the screen

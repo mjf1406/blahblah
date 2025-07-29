@@ -4,6 +4,7 @@
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface BorderControlsProps {
     borderWidth: number;
@@ -21,9 +22,30 @@ export const BorderControls: React.FC<BorderControlsProps> = ({
     return (
         <div className="space-y-4">
             <div>
-                <Label className="text-sm font-medium">
-                    Border Width: {borderWidth}px
-                </Label>
+                <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                        Border Width: {borderWidth}px
+                    </Label>
+                    <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <img
+                                src="/assets/img/fvtt.png"
+                                alt="FoundryVTT icon"
+                                width={16}
+                                height={16}
+                                className="cursor-help"
+                            />
+                        </TooltipTrigger>
+                        <TooltipContent
+                            side="top"
+                            className="max-w-xs"
+                        >
+                            Using default settings, FoundryVTT does not support
+                            a border. We automatically set it to 0 upon export,
+                            so don't worry 😁
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
                 <Slider
                     value={[borderWidth]}
                     onValueChange={(v) => onBorderWidthChange(v[0])}
