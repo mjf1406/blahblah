@@ -31,6 +31,7 @@ import { GridType } from "@/hooks/useGridState";
 import { getHexagonProperties, HexagonProperties } from "@/utils/hexagon";
 
 const TV_SIZES = [
+    { label: '15.5"', inches: 15.5 },
     { label: '24"', inches: 24 },
     { label: '27"', inches: 27 },
     { label: '32"', inches: 32 },
@@ -43,6 +44,7 @@ const TV_SIZES = [
 ] as const;
 
 const TV_SIZES_CM = [
+    { label: "39cm", inches: 15.5 },
     { label: "61cm", inches: 24 },
     { label: "69cm", inches: 27 },
     { label: "81cm", inches: 32 },
