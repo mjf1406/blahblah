@@ -15,7 +15,15 @@ import {
 } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import { Button } from "./components/ui/button";
-import { Home, Users, Swords, Globe, Map, MapPinned } from "lucide-react";
+import {
+    Home,
+    Users,
+    Swords,
+    Globe,
+    Map,
+    MapPinned,
+    ShoppingBag,
+} from "lucide-react";
 
 const HomePage = lazy(() =>
     import("./components/HomePage").then((module) => ({
@@ -50,9 +58,11 @@ function Navigation() {
     const navItems = [
         { path: "/", icon: Home, label: "Home" },
         { path: "/parties", icon: Users, label: "Parties" },
+        { path: "/magic-shops", icon: ShoppingBag, label: "Magic Shops" },
         { path: "/encounters", icon: Swords, label: "Encounters" },
         { path: "/worlds", icon: Globe, label: "Worlds" },
-        { path: "/maps", icon: Map, label: "Maps" },
+        { path: "/regions", icon: Map, label: "Regions" },
+        { path: "/battle-maps", icon: MapPinned, label: "Battle Maps" },
         { path: "/canvas", icon: MapPinned, label: "Canvas" },
     ];
 
