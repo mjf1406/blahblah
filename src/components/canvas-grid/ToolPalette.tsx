@@ -245,22 +245,14 @@ const ToolPalette: React.FC<ToolPaletteProps> = ({
                             >
                                 <div className="space-y-2 text-sm">
                                     <div className="mb-2 font-semibold">
-                                        Canvas Controls:
+                                        Canvas Controls
                                     </div>
                                     <div className="space-y-1">
                                         <div>
-                                            <strong>Left Click:</strong>{" "}
-                                            Paint/Select
+                                            <strong>Left Click:</strong> Paint
                                         </div>
                                         <div>
-                                            <strong>Right Click:</strong> Erase
-                                            tile
-                                        </div>
-                                        <div>
-                                            <strong>
-                                                Middle Click + Drag:
-                                            </strong>{" "}
-                                            Pan view
+                                            <strong>Right Click:</strong> Pan
                                         </div>
                                         <div>
                                             <strong>Mouse Wheel:</strong> Zoom
